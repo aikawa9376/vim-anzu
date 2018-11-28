@@ -270,7 +270,7 @@ function! s:finish()
   let s:matchlist = []
 
   call nvim_buf_clear_highlight(bufnr('%'), s:anzu_id, 0, -1)
-  call execute("set nohlsearch")
+  call execute("noh")
   " call execute("set hlsearch")
 endfunction
 
