@@ -68,7 +68,6 @@ function! s:hl_cursor(hl, pos)
   let s:hl_cursor_id = matchadd(a:hl, printf('\%%%dl\%%%dc', a:pos[0], a:pos[1]))
 endfunction
 
-let s:old_line_num = 0
 function! s:jump(prefix, key, suffix)
   if !empty(a:prefix) | execute "normal!" a:prefix | endif
   while 1
@@ -81,20 +80,30 @@ function! s:jump(prefix, key, suffix)
   endwhile
   if !empty(a:suffix) | execute "normal!" a:suffix | endif
 
-  " Nも除外しないとおかしくなる
-  if s:old_line_num >= line('.')
-    let c = 1
-    " 再計算が良い
-    let s:count = 1
-  elseif a:key ==# "n"
-    let c = anzu#mode#counter()
-  elseif a:key ==# "N"
-    echom a:key
-    let c = anzu#mode#counter(1)
+
+  if a:key ==# "n" || a:key ==# "*"
+    if s:old_line_num > line('.')
+      let c = 1
+      let s:count = 1
+    else
+      let c = anzu#mode#counter()
+    endif
+  elseif a:key ==# "N" || a:key ==# "#"
+    if s:old_line_num < line('.')
+      let c = s:total_count
+      let s:count = s:total_count
+    else
+      if s:first_session == 0
+        let c = s:count
+      else
+        let c = anzu#mode#counter(1)
+      endif
+    endif
   else
     " TODO
     let c = anzu#mode#counter()
   endif
+
 
   call nvim_buf_clear_highlight(bufnr('%'), s:anzu_id, 0, -1)
   let chunks = [[" -> (" . c . "/" . s:total_count . ")", "NvimList"]]
@@ -103,10 +112,12 @@ function! s:jump(prefix, key, suffix)
         \ bufnr('%'), s:anzu_id, line('.') - 1, chunks, {})
 
   let s:old_line_num = line(".")
+  let s:first_session = 1
 
 endfunction
 
-
+let s:old_line_num = 0
+let s:first_session = 0
 function! anzu#mode#start(pattern, key, prefix, suffix, ...)
   if a:pattern == ""
     return
@@ -115,6 +126,8 @@ function! anzu#mode#start(pattern, key, prefix, suffix, ...)
   let back_key = get(a:, 2, "N")
   try
     call s:init(a:pattern)
+    let s:old_line_num = line('.')
+    let s:first_session = 0
     if a:key != ""
       call s:jump(a:prefix, a:key, a:suffix)
     endif
@@ -134,7 +147,7 @@ function! anzu#mode#start(pattern, key, prefix, suffix, ...)
     else
       call s:jump(a:prefix, char, a:suffix)
     endif
-    call s:hl_cursor("Cursor", getpos(".")[1:])
+    " call s:hl_cursor("Cursor", getpos(".")[1:])
     redraw
     let char = s:getchar()
   endwhile
@@ -270,8 +283,8 @@ function! s:finish()
   let s:matchlist = []
 
   call nvim_buf_clear_highlight(bufnr('%'), s:anzu_id, 0, -1)
-  call execute("noh")
-  " call execute("set hlsearch")
+  " TODO fix
+  call execute("normal! \<Esc>\<Esc>")
 endfunction
 
 
