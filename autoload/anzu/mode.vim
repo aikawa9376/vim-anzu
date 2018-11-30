@@ -4,7 +4,7 @@ set cpo&vim
 
 let s:anzu_id = 1050
 if exists('*nvim_create_namespace')
-  let s:anzu_id = nvim_create_namespace('echodoc.vim')
+  let s:anzu_id = nvim_create_namespace('anzu.vim')
 elseif exists('*nvim_buf_add_highlight')
   let s:anzu_id = nvim_buf_add_highlight(0, 0, '', 0, 0, 0)
 endif
@@ -80,28 +80,31 @@ function! s:jump(prefix, key, suffix)
   endwhile
   if !empty(a:suffix) | execute "normal!" a:suffix | endif
 
-
-  if a:key ==# "n" || a:key ==# "*"
-    if s:old_line_num > line('.')
-      let c = 1
-      let s:count = 1
+  if s:total_count != 1
+    if a:key ==# "n" || a:key ==# "*"
+      if s:old_line_num > line('.')
+        let c = 1
+        let s:count = 1
+      else
+        let c = anzu#mode#counter()
+      endif
+    elseif a:key ==# "N" || a:key ==# "#"
+      if s:old_line_num < line('.')
+        let c = s:total_count
+        let s:count = s:total_count
+      else
+        if s:first_session == 0
+          let c = s:count
+        else
+          let c = anzu#mode#counter(1)
+        endif
+      endif
     else
+      " TODO
       let c = anzu#mode#counter()
     endif
-  elseif a:key ==# "N" || a:key ==# "#"
-    if s:old_line_num < line('.')
-      let c = s:total_count
-      let s:count = s:total_count
-    else
-      if s:first_session == 0
-        let c = s:count
-      else
-        let c = anzu#mode#counter(1)
-      endif
-    endif
   else
-    " TODO
-    let c = anzu#mode#counter()
+    let c = 1
   endif
 
 
@@ -147,7 +150,7 @@ function! anzu#mode#start(pattern, key, prefix, suffix, ...)
     else
       call s:jump(a:prefix, char, a:suffix)
     endif
-    " call s:hl_cursor("Cursor", getpos(".")[1:])
+    call s:hl_cursor("Cursor", getpos(".")[1:])
     redraw
     let char = s:getchar()
   endwhile
@@ -224,7 +227,10 @@ function! s:init(pattern)
 
   let format = "%s(%d\\/%d)"
   let len = len(anzu#searchpos(a:pattern))
+  " let len = len(split(join(getline(0, line("$")), "\n"), a:pattern, 1))-1
+  " TODO astalisc \<**\> remove?
 
+  " echom a:pattern
   let s:count = len(split(join(getline(0, line(".")), "\n"), a:pattern, 1))-1
   let s:total_count= len
 
@@ -283,6 +289,7 @@ function! s:finish()
   let s:matchlist = []
 
   unlet! s:hl_cursor_id
+  call feedkeys(":noh\<CR>")
   redraw
 
   call nvim_buf_clear_highlight(bufnr('%'), s:anzu_id, 0, -1)
