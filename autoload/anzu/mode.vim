@@ -256,7 +256,7 @@ function! s:finish()
   if get(s:, "undo_flag", 0)
     call s:silent_undo()
     if exists("s:undo_file")
-    \   && filereadable(s:undo_file)
+          \   && filereadable(s:undo_file)
       silent execute "rundo" s:undo_file
       call delete(s:undo_file)
     endif
@@ -282,9 +282,10 @@ function! s:finish()
   endfor
   let s:matchlist = []
 
+  unlet! s:hl_cursor_id
+  redraw
+
   call nvim_buf_clear_highlight(bufnr('%'), s:anzu_id, 0, -1)
-  " TODO fix
-  call execute("normal! \<Esc>\<Esc>")
 endfunction
 
 
